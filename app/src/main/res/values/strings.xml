@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">usb1_0</string>
+    <string name="title_activity_file_browser">FIleBrowser</string>
 </resources>

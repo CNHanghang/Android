@@ -44,13 +44,23 @@ public class MainActivity extends AppCompatActivity {
         Log.d("MainActivity", "hello");
 
 
-       /* Button button1 = (Button) findViewById(R.id.button_open);
-        button1.setOnClickListener(new View.OnClickListener(){
+        Button buttonBrowse = (Button) findViewById(R.id.button_browse);
+        buttonBrowse.setOnClickListener(new View.OnClickListener(){
             @Override
-            public void onClick(View v){
-                Toast.makeText(MainActivity.this, "正在打开文件",
-                        Toast.LENGTH_SHORT).show();*/
-  /*          }
-        });*/
+            public void onClick(View v) {
+                Toast.makeText(MainActivity.this, "正在浏览文件",
+                        Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("*/*");
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                try {
+                    startActivityForResult(Intent.createChooser(intent, "请选择代码文件"), 0);
+                } catch (android.content.ActivityNotFoundException ex) {
+                    Toast.makeText(MainActivity.this, "请安装文件管理器", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+
+            });
     }
 }
