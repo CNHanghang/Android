@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -19,12 +20,23 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileInputStream;
-
+import com.usbxyz.usbtransmit.USBTransmit;
 public class MainActivity extends AppCompatActivity {
 
     public String path = "";
     public String realPath = "";
-
+    USBTransmit mUSBTransmit;
+    //TextView textView;
+    public class ConnectStateChanged implements USBTransmit.DeviceConnectStateChanged{
+        @Override
+        public void stateChanged(boolean connected) {
+            if(connected){
+                Toast.makeText(MainActivity.this, "设备已连接", Toast.LENGTH_SHORT).show();
+            }else{
+                Toast.makeText(MainActivity.this, "设备断开连接", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -57,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
                 realPath = "/storage/emulated/0/" + path.substring(16);
 
                 TextView textFileName = (TextView) findViewById(R.id.textView_filename);
-                textFileName.setText(path);
+                textFileName.setText(realPath);
                 Log.d("MyPath", path);
                 /*try
                 {
@@ -68,7 +80,27 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
-        super.onActivityResult(requestCode, resultCode, data);
+        /*super.onActivityResult(requestCode, resultCode, data);*/
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+
+//        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch(requestCode)
+        {
+            case 1:
+                if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                {
+                    TransmitCode();
+                }
+                else
+                {
+                    Toast.makeText(MainActivity.this, "You denied the permission", Toast.LENGTH_SHORT).show();
+                }
+                break;
+            default:break;
+        }
     }
 
     @Override
@@ -78,7 +110,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Log.d("MainActivity", "hello");
 
-
+        mUSBTransmit = new USBTransmit(this,new ConnectStateChanged());
         Button buttonBrowse = (Button) findViewById(R.id.button_browse);
         buttonBrowse.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -108,24 +140,32 @@ public class MainActivity extends AppCompatActivity {
                 if (ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
                 } else {
-                    try {
-                        File file = new File(realPath);
-                        if (!file.exists()) {
-                            throw new RuntimeException("the file is not exist");
-                        }
-                        FileInputStream input = new FileInputStream(file);
-                        byte[] buffer = new byte[512];
-                        int len = input.read(buffer);
-                        Log.d("MainActivity", Integer.toString(len));
-                        String str = new String(buffer, 0, len);
-                        Log.d("MainAcativity", str);
-                        input.close();
-                    } catch (Exception e) {
-                        Toast.makeText(MainActivity.this, "Faild to read file.", Toast.LENGTH_SHORT).show();
-                    }
+                    TransmitCode();
                 }
 
             }
         });
     }
+
+    private void TransmitCode()
+    {
+        try {
+            File file = new File(realPath);
+            if (!file.exists()) {
+                throw new RuntimeException("the file is not exist");
+            }
+            FileInputStream input = new FileInputStream(file);
+            byte[] buffer = new byte[512];
+            int len = input.read(buffer);
+            Log.d("MainActivity", Integer.toString(len));
+            String str = new String(buffer, 0, len);
+            Log.d("MainAcativity", str);
+            input.close();
+            Toast.makeText(MainActivity.this, "file read successfully", Toast.LENGTH_SHORT).show();
+
+        } catch (Exception e) {
+            Toast.makeText(MainActivity.this, "Faild to read file.", Toast.LENGTH_SHORT).show();
+        }
+    }
 }
+
