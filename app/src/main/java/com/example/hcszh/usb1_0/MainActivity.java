@@ -20,23 +20,27 @@ import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileInputStream;
+
 import com.usbxyz.usbtransmit.USBTransmit;
+
 public class MainActivity extends AppCompatActivity {
 
     public String path = "";
     public String realPath = "";
     USBTransmit mUSBTransmit;
+
     //TextView textView;
-    public class ConnectStateChanged implements USBTransmit.DeviceConnectStateChanged{
+    public class ConnectStateChanged implements USBTransmit.DeviceConnectStateChanged {
         @Override
         public void stateChanged(boolean connected) {
-            if(connected){
+            if (connected) {
                 Toast.makeText(MainActivity.this, "设备已连接", Toast.LENGTH_SHORT).show();
-            }else{
+            } else {
                 Toast.makeText(MainActivity.this, "设备断开连接", Toast.LENGTH_SHORT).show();
             }
         }
     }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
@@ -87,19 +91,16 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 
 //        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch(requestCode)
-        {
+        switch (requestCode) {
             case 1:
-                if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     TransmitCode();
-                }
-                else
-                {
+                } else {
                     Toast.makeText(MainActivity.this, "You denied the permission", Toast.LENGTH_SHORT).show();
                 }
                 break;
-            default:break;
+            default:
+                break;
         }
     }
 
@@ -110,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Log.d("MainActivity", "hello");
 
-        mUSBTransmit = new USBTransmit(this,new ConnectStateChanged());
+        mUSBTransmit = new USBTransmit(this, new ConnectStateChanged());
         Button buttonBrowse = (Button) findViewById(R.id.button_browse);
         buttonBrowse.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -147,24 +148,74 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void TransmitCode()
-    {
+    private void TransmitCode() {
+        byte[] buffer = new byte[512];
+
         try {
             File file = new File(realPath);
             if (!file.exists()) {
                 throw new RuntimeException("the file is not exist");
             }
             FileInputStream input = new FileInputStream(file);
-            byte[] buffer = new byte[512];
+
             int len = input.read(buffer);
             Log.d("MainActivity", Integer.toString(len));
-            String str = new String(buffer, 0, len);
-            Log.d("MainAcativity", str);
+
+
             input.close();
             Toast.makeText(MainActivity.this, "file read successfully", Toast.LENGTH_SHORT).show();
 
         } catch (Exception e) {
             Toast.makeText(MainActivity.this, "Faild to read file.", Toast.LENGTH_SHORT).show();
+        }
+
+        int devIndex = 0;
+        int DataNum = 5000;//单位为包
+        int PacketSize = 512;//每次传输的数据字节数，该参数必须和单片机中的参数完全匹配，该参数不能大于或等于64K
+        int DataNumIndex = DataNum;
+        int ret;
+        boolean State;
+        byte[] WriteDataBuffer = new byte[PacketSize - 1];
+        String str = new String(buffer, 0, 512);
+        Log.d("MainAcativity", str);
+
+        //扫描设备连接数
+        int devNum = mUSBTransmit.usbDevice.USBScanDevice();
+        if (devNum <= 0) {
+            Toast.makeText(MainActivity.this, "无设备连接", Toast.LENGTH_SHORT).show();
+            return;
+        } else {
+            Toast.makeText(MainActivity.this, "连接设备数为" + Integer.toString(devNum), Toast.LENGTH_SHORT).show();
+        }
+        //打开设备
+        if (!mUSBTransmit.usbDevice.USBOpenDevice(devIndex)) {
+            Toast.makeText(MainActivity.this, "打开设备失败", Toast.LENGTH_SHORT).show();
+            return;
+        } else {
+            Toast.makeText(MainActivity.this, "打开设备成功", Toast.LENGTH_SHORT).show();
+        }
+
+        //System.arraycopy(buffer, 0, WriteDataBuffer, 0, 512);
+        //Log.d("MainActivity", WriteDataBuffer.toString());
+        State = mUSBTransmit.usbDevice.USBBulkWriteData(devIndex, mUSBTransmit.EP1_OUT, buffer, 512, 100);
+        if (State) {
+            Toast.makeText(MainActivity.this, "写数据成功", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(MainActivity.this, "写数据失败", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+
+        //receive
+        do {
+            ret = mUSBTransmit.usbDevice.USBBulkReadData(devIndex, mUSBTransmit.EP1_IN, buffer, PacketSize, 1000);
+        } while (ret <= 0);
+        if (buffer[0] == 'O' && buffer[1] == 'K') {
+            buffer[0] = 0x0e;
+            buffer[1] = 0x00;
+            buffer[2] = 0x0f;
+            mUSBTransmit.usbDevice.USBBulkWriteData(devIndex, mUSBTransmit.EP1_OUT, buffer, 3, 100);
+            Toast.makeText(MainActivity.this, "传输结束", Toast.LENGTH_SHORT).show();
         }
     }
 }
