@@ -45,8 +45,8 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.item_download:
-                Toast.makeText(this, "下载", Toast.LENGTH_SHORT).show();
-                Intent intent = new Intent(MainActivity.this, download_code.class);
+                //Toast.makeText(this, "下载", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(MainActivity.this, WebViewActivity.class);
                 startActivity(intent);
                 break;
             case R.id._item_transmit:
